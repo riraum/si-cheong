@@ -30,7 +30,7 @@ func (s Server) getIndex(w http.ResponseWriter, r *http.Request) {
 		par["direction"] = r.FormValue("direction")
 	}
 
-	posts, err := s.DB.ReadPosts(par)
+	posts, err := s.DB.Read(par)
 	if err != nil {
 		log.Fatalf("read posts: %v", err)
 	}
@@ -65,13 +65,13 @@ func (s Server) getAPIPosts(w http.ResponseWriter, r *http.Request) {
 		par["direction"] = r.FormValue("direction")
 	}
 
-	p, err := s.DB.ReadPosts(par)
+	posts, err := s.DB.Read(par)
 	if err != nil {
 		log.Fatalf("read posts: %v", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, http.StatusOK, p)
+	fmt.Fprintln(w, http.StatusOK, posts)
 }
 
 func (s Server) postAPIPosts(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +119,7 @@ func (s Server) viewPost(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("convert to float: %v", err)
 	}
 
-	p, err := s.DB.ReadPost(int(ID))
+	p, err := s.DB.ReadSinglePost(int(ID))
 	if err != nil {
 		log.Fatalf("read posts: %v", err)
 	}
@@ -154,7 +154,7 @@ func (s Server) editPost(w http.ResponseWriter, r *http.Request) {
 	p.Link = r.FormValue("link")
 	p.Content = r.FormValue("content")
 
-	err = s.DB.UpdatePost(p)
+	err = s.DB.EditPost(p)
 	if err != nil {
 		log.Fatalf("edit post in db: %v", err)
 	}

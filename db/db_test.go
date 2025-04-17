@@ -30,7 +30,7 @@ func TestAll(t *testing.T) {
 		"direction": "asc",
 	}
 
-	got, err := d.ReadPosts(par)
+	got, err := d.Read(par)
 	if err != nil {
 		t.Errorf("error getting rows: %v", err)
 	}
