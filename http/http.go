@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/riraum/si-cheong/db"
+	"github.com/riraum/si-cheong/security"
 )
 
 type Server struct {
@@ -16,6 +17,7 @@ type Server struct {
 	EmbedRootDir embed.FS
 	DB           db.DB
 	T            *template.Template
+	Key          *[32]byte
 }
 
 func (s Server) getIndex(w http.ResponseWriter, r *http.Request) {
@@ -193,7 +195,17 @@ func (s Server) authenticated(r *http.Request, w http.ResponseWriter) bool {
 		return false
 	}
 
-	authorExists, err := s.DB.AuthorExists(cookie.Value)
+	encryptedAuthor := cookie.Value
+	fmt.Printf("%x", encryptedAuthor)
+
+	decryptedAuthor, err := security.Decrypt([]byte(cookie.Value), s.Key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("decrypted author:", decryptedAuthor)
+
+	authorExists, err := s.DB.AuthorExists(fmt.Sprintf("%x", decryptedAuthor))
 	if err != nil {
 		log.Fatalf("failed sql author exist check: %v", err)
 	}
@@ -234,10 +246,21 @@ func (s Server) getLogin(w http.ResponseWriter, _ *http.Request) {
 
 func (s Server) postLogin(w http.ResponseWriter, r *http.Request) {
 	authorInput := r.FormValue("author")
+
+	fmt.Println("plain author:", authorInput)
+
+	encryptedAuthor, err := security.Encrypt([]byte(authorInput), s.Key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%x", encryptedAuthor)
+
 	cookie := http.Cookie{
-		Name:  "authorName",
-		Value: authorInput,
-		Path:  "/",
+		Name:   "authorName",
+		Value:  fmt.Sprintf("%x", encryptedAuthor),
+		Path:   "/",
+		Secure: true,
 	}
 
 	authorExists, err := s.DB.AuthorExists(authorInput)
