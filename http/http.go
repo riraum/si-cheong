@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/riraum/si-cheong/db"
+	"github.com/riraum/si-cheong/security"
 )
 
 type Server struct {
@@ -233,11 +234,24 @@ func (s Server) getLogin(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s Server) postLogin(w http.ResponseWriter, r *http.Request) {
+	key := security.NewEncryptionKey()
 	authorInput := r.FormValue("author")
+	passwordInput := r.FormValue("password")
+
+	fmt.Println("plain password:", passwordInput)
+
+	encryptedPassword, err := security.Encrypt([]byte(passwordInput), key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%x", encryptedPassword)
+
 	cookie := http.Cookie{
-		Name:  "authorName",
-		Value: authorInput,
-		Path:  "/",
+		Name:   authorInput,
+		Value:  fmt.Sprintf("%x", encryptedPassword),
+		Path:   "/",
+		Secure: true,
 	}
 
 	authorExists, err := s.DB.AuthorExists(authorInput)
