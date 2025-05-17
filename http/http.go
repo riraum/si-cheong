@@ -2,6 +2,7 @@ package http
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/riraum/si-cheong/db"
+	"github.com/riraum/si-cheong/security"
 )
 
 type Server struct {
@@ -16,6 +18,7 @@ type Server struct {
 	EmbedRootDir embed.FS
 	DB           db.DB
 	T            *template.Template
+	Key          *[32]byte
 }
 
 func (s Server) getIndex(w http.ResponseWriter, r *http.Request) {
@@ -193,7 +196,25 @@ func (s Server) authenticated(r *http.Request, w http.ResponseWriter) bool {
 		return false
 	}
 
-	authorExists, err := s.DB.AuthorExists(cookie.Value)
+	encryptedAuthor := cookie.Value
+	fmt.Println("auth func, encrypted author:", encryptedAuthor)
+
+	encryptedAuthorByte, _ := base64.StdEncoding.DecodeString(encryptedAuthor)
+	fmt.Println("auth func, encrypted author byte:", encryptedAuthorByte)
+
+	fmt.Println("auth func, key:", s.Key)
+
+	decryptedAuthor, err := security.Decrypt(encryptedAuthorByte, s.Key)
+	if err != nil {
+		log.Fatalf("failed to decrypt: %v", err)
+	}
+
+	fmt.Println("decrypted author byte:", decryptedAuthor)
+
+	decryptedAuthorStr := string(decryptedAuthor)
+	fmt.Println("decryptedAuthorStr:", decryptedAuthorStr)
+
+	authorExists, err := s.DB.AuthorExists(fmt.Sprintf("%x", decryptedAuthor))
 	if err != nil {
 		log.Fatalf("failed sql author exist check: %v", err)
 	}
@@ -234,10 +255,29 @@ func (s Server) getLogin(w http.ResponseWriter, _ *http.Request) {
 
 func (s Server) postLogin(w http.ResponseWriter, r *http.Request) {
 	authorInput := r.FormValue("author")
+
+	plainAuthorByte := []byte(authorInput)
+
+	fmt.Println("plain author:", string(plainAuthorByte))
+
+	encryptedAuthor, err := security.Encrypt(plainAuthorByte, s.Key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encryptedAuthorStr := fmt.Sprintf("%x", encryptedAuthor)
+
+	fmt.Println("encrypted author:", encryptedAuthorStr)
+
+	fmt.Println("encrypted author byte:", encryptedAuthor)
+
+	fmt.Println("login func, key:", s.Key)
+
 	cookie := http.Cookie{
-		Name:  "authorName",
-		Value: authorInput,
-		Path:  "/",
+		Name:   "authorName",
+		Value:  encryptedAuthorStr,
+		Path:   "/",
+		Secure: true,
 	}
 
 	authorExists, err := s.DB.AuthorExists(authorInput)
@@ -247,6 +287,13 @@ func (s Server) postLogin(w http.ResponseWriter, r *http.Request) {
 
 	if authorExists {
 		http.SetCookie(w, &cookie)
+
+		fmt.Println("encrypted cookie value:", cookie.Value)
+
+		if cookie.Value == encryptedAuthorStr {
+			fmt.Println("author name encrypted, set cookie value does match!")
+		}
+
 		http.Redirect(w, r, "/done", http.StatusSeeOther)
 	}
 
