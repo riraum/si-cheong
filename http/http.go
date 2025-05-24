@@ -96,7 +96,7 @@ func parseDate(ti int64) time.Time {
 func parseRValues(r *http.Request) (db.Post, error) {
 	var p db.Post
 
-	// fmt.Println("id parse", r.PathValue("id"))
+	fmt.Println("id parse", r.PathValue("id"))
 
 	if r.PathValue("id") != "" {
 		ID, err := strconv.ParseFloat(r.PathValue("id"), 32)
@@ -274,7 +274,7 @@ func (s Server) deleteAPIPost(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed to parse values: %v", err)
 	}
 
-	err = s.DB.DeletePost(p.ID)
+	err = s.DB.DeletePost(p)
 	if err != nil {
 		log.Fatalf("delete post in db: %v", err)
 	}
@@ -298,17 +298,15 @@ func (s Server) deletePost(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed to parse values: %v", err)
 	}
 
-	err = s.DB.DeletePost(p.ID)
+	fmt.Println("deletePost ID:", p.ID)
+
+	err = s.DB.DeletePost(p)
 	if err != nil {
+		http.Redirect(w, r, "/fail?reason=deleteFailed", http.StatusSeeOther)
 		log.Fatalf("delete post in db: %v", err)
 	}
 
-	w.WriteHeader(http.StatusGone)
-
-	err = json.NewEncoder(w).Encode(p)
-	if err != nil {
-		log.Fatalf("failed to encode %v", err)
-	}
+	http.Redirect(w, r, "/done", http.StatusSeeOther)
 }
 
 func (s Server) viewPost(w http.ResponseWriter, r *http.Request) {
@@ -372,10 +370,11 @@ func (s Server) editPost(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed to parse values: %v", err)
 	}
 
-	fmt.Println("editPost print date:", p.Date)
+	// fmt.Println("editPost print date:", p.Date)
 
 	err = s.DB.UpdatePost(p)
 	if err != nil {
+		http.Redirect(w, r, "/fail?reason=editFailed", http.StatusSeeOther)
 		log.Fatalf("edit post in db: %v", err)
 	}
 
@@ -435,7 +434,7 @@ func (s Server) postLogin(w http.ResponseWriter, r *http.Request) {
 
 	if authorExists {
 		http.SetCookie(w, &cookie)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/?loggedinOkay", http.StatusSeeOther)
 	}
 
 	if !authorExists {
