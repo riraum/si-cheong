@@ -27,7 +27,7 @@ type Post struct {
 	AuthorID   float32 // Author.ID
 }
 
-type Posts []*Post
+type Posts []Post
 
 type Params struct {
 	Sort      string
@@ -184,14 +184,32 @@ func (d DB) UpdatePost(p Post) error {
 }
 
 func (p Params) String() string {
-	where := ""
+	var sort string
+	var direction string
+	var author string
 
-	if p.Author != "" {
-		where = fmt.Sprintf("WHERE author = %s", p.Author)
+	switch p.Sort {
+	case "title":
+		sort = "title"
+	default:
+		sort = "date"
 	}
 
-	queryString := fmt.Sprintf("SELECT id, date, title, link, content, author FROM posts %s ORDER BY %s %s",
-		where, p.Sort, p.Direction)
+	switch p.Direction {
+	case "desc":
+		direction = "desc"
+	default:
+		direction = "asc"
+	}
+
+	switch p.Author {
+	case "":
+		author = ""
+	default:
+		author = "WHERE author = ?"
+	}
+
+	queryString := fmt.Sprintf("SELECT id, date, title, link, content, author FROM posts %s ORDER BY %s %s", author, sort, direction)
 
 	return queryString
 }
@@ -200,7 +218,18 @@ func (d DB) ReadPosts(p Params) (Posts, error) {
 	var post Post
 	var posts Posts
 
+	var where string
+	var rows *sql.Rows
+
+	// where := ""
+
+	if p.Author != "" {
+		where = p.Author
+	}
+
 	query := p.String()
+
+	fmt.Println("query", query)
 
 	stmt, err := d.client.Prepare(query)
 	if err != nil {
@@ -208,11 +237,24 @@ func (d DB) ReadPosts(p Params) (Posts, error) {
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query()
-	if err != nil {
-		return nil, fmt.Errorf("failed to select %w", err)
+	fmt.Println("stmt", stmt)
+
+	switch p.Author {
+	case "":
+		rows, err = stmt.Query()
+		if err != nil {
+			return nil, fmt.Errorf("failed to select %w", err)
+		}
+		defer rows.Close()
+	default:
+		rows, err = stmt.Query(where)
+		if err != nil {
+			return nil, fmt.Errorf("failed to select %w", err)
+		}
+		defer rows.Close()
 	}
-	defer rows.Close()
+
+	// rows, err := stmt.Query()
 
 	for rows.Next() {
 		err = rows.Scan(&post.ID, &post.Date, &post.Title, &post.Link, &post.Content, &post.AuthorID)
@@ -220,7 +262,7 @@ func (d DB) ReadPosts(p Params) (Posts, error) {
 			return nil, fmt.Errorf("failed to scan %w", err)
 		}
 
-		posts = append(posts, &post)
+		posts = append(posts, post)
 	}
 
 	return posts, nil
@@ -243,12 +285,12 @@ func (d DB) ReadPost(id int) (Post, error) {
 	return p, nil
 }
 
-func (p *Post) ParseDate() {
+func (p Post) ParseDate() {
 	p.ParsedDate = time.Unix(p.Date, 0)
 }
 
-func (p *Posts) ParseDates() {
-	for _, post := range *p {
+func (p Posts) ParseDates() {
+	for _, post := range p {
 		post.ParseDate()
 	}
 }
