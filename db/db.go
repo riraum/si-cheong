@@ -216,6 +216,7 @@ func (p Params) Query() string {
 
 func (d DB) ReadPosts(p Params) (Posts, error) {
 	var post Post
+
 	var posts Posts
 
 	var where string
