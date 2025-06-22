@@ -25,9 +25,10 @@ func TestAll(t *testing.T) {
 		t.Errorf("error filling db: %v", err)
 	}
 
-	par := map[string]string{
-		"sort":      "date",
-		"direction": "asc",
+	par := Params{
+		Sort:      "date",
+		Direction: "asc",
+		// Author:    "",
 	}
 
 	got, err := d.ReadPosts(par)
@@ -37,28 +38,29 @@ func TestAll(t *testing.T) {
 
 	want := []Post{
 		{
-			ID:       1,
-			Date:     20250101,
-			Title:    "Complaint",
-			Link:     "https://http.cat/status/200",
-			Content:  "A",
-			AuthorID: 1,
-		},
-		{
-			ID:       2,
-			Date:     20250201,
+			// ID:       2,
+			Date:     1684997010,
 			Title:    "Feedback",
 			Link:     "https://http.cat/status/100",
 			Content:  "B",
 			AuthorID: 2,
 		},
 		{
-			ID:       3,
-			Date:     20250301,
+			// ID:       3,
+			Date:     1727780130,
 			Title:    "Announcement",
 			Link:     "https://http.cat/status/301",
 			Content:  "C",
 			AuthorID: 3,
+		},
+		{
+
+			// ID:       1,
+			Date:     1748000743,
+			Title:    "Complaint",
+			Link:     "https://http.cat/status/200",
+			Content:  "A",
+			AuthorID: 1,
 		},
 	}
 
