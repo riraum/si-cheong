@@ -85,18 +85,26 @@ func (d DB) Fill() error {
 		return fmt.Errorf("failed to create tables %w", err)
 	}
 
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to load env %w", err)
+	// }
+
+	ALPHA_PW_DECRYPTED := os.Getenv("ALPHA_PW")
+	log.Println("print decrypted A PW", ALPHA_PW_DECRYPTED)
+
 	authors := []Author{
 		{
-			Name:     "Alpha",
-			Password: "abc",
+			Name:     "A",
+			Password: ALPHA_PW_DECRYPTED,
 		},
 		{
-			Name:     "Bravo",
-			Password: "abc",
+			Name:     "B",
+			Password: os.Getenv("BRAVO_PW"),
 		},
 		{
-			Name:     "Charlie",
-			Password: "abc",
+			Name:     "C",
+			Password: os.Getenv("CHARLIE_PW"),
 		},
 	}
 	for _, a := range authors {
@@ -109,7 +117,7 @@ func (d DB) Fill() error {
 	posts := []Post{
 		{
 			Date:     1748000743, //nolint:mnd
-			Title:    "Status 200",
+			Title:    "DOTENV SCRIPT Status 200",
 			Link:     "https://http.cat/status/200",
 			Content:  "Good HTTP status 200 explainer",
 			AuthorID: 1,
